@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Splice TA Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --blue-cassette: #0057FF;
+    --al-green: #00C853;
+    --bodak-yellow: #FFD600;
+    --purple-rain: #7B2FBE;
+    --channel-orange: #FF6B2B;
+    --bg: #0A0A0F;
+    --surface: #13131A;
+    --surface2: #1C1C27;
+    --border: rgba(255,255,255,0.08);
+    --text: #F0F0F8;
+    --muted: #7A7A9A;
+    --danger: #FF4C4C;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .logo-badge {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: var(--blue-cassette);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: white;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-sub { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .last-updated { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  /* ── FILTERS ── */
+  .filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 32px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; }
+  .filter-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; }
+  select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:hover { border-color: var(--blue-cassette); }
+  select:focus { border-color: var(--blue-cassette); }
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: auto;
+  }
+  .reset-btn:hover { border-color: var(--blue-cassette); color: var(--blue-cassette); }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    padding: 16px 32px 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 18px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--blue-cassette); border-bottom-color: var(--blue-cassette); }
+
+  /* ── CONTENT ── */
+  .content { padding: 28px 32px; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── KPI GRID ── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .kpi-card:hover { border-color: rgba(255,255,255,0.18); }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .kpi-card.blue::before { background: var(--blue-cassette); }
+  .kpi-card.green::before { background: var(--al-green); }
+  .kpi-card.yellow::before { background: var(--bodak-yellow); }
+  .kpi-card.purple::before { background: var(--purple-rain); }
+  .kpi-card.orange::before { background: var(--channel-orange); }
+  .kpi-card.red::before { background: var(--danger); }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; margin-bottom: 10px; }
+  .kpi-value { font-size: 32px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── CHARTS GRID ── */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+  .chart-wide { grid-column: 1 / -1; }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .chart-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 16px; font-family: 'DM Mono', monospace; }
+  .chart-container { position: relative; height: 240px; }
+  .chart-container.tall { height: 320px; }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-title { font-size: 14px; font-weight: 600; }
+  .table-count { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .table-wrap { overflow-x: auto; max-height: 380px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { position: sticky; top: 0; background: var(--surface2); z-index: 1; }
+  th { padding: 10px 16px; text-align: left; font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; white-space: nowrap; }
+  td { padding: 10px 16px; border-top: 1px solid var(--border); white-space: nowrap; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+  }
+  .badge-blue { background: rgba(0,87,255,0.15); color: #6B9FFF; }
+  .badge-green { background: rgba(0,200,83,0.15); color: #4CD985; }
+  .badge-yellow { background: rgba(255,214,0,0.15); color: #FFD600; }
+  .badge-red { background: rgba(255,76,76,0.15); color: #FF7A7A; }
+  .badge-orange { background: rgba(255,107,43,0.15); color: #FF9D6B; }
+  .badge-purple { background: rgba(123,47,190,0.15); color: #BB86FC; }
+  .badge-gray { background: rgba(255,255,255,0.06); color: var(--muted); }
+
+  /* ── PIPELINE STAGES ── */
+  .pipeline-row { display: flex; gap: 6px; align-items: center; }
+  .stage-chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 10px;
+    background: var(--surface2);
+    border-radius: 6px;
+    font-size: 10px;
+    min-width: 60px;
+    border: 1px solid var(--border);
+  }
+  .stage-chip .count { font-size: 18px; font-weight: 700; color: var(--blue-cassette); font-family: 'DM Mono', monospace; }
+  .stage-chip .label { color: var(--muted); text-align: center; margin-top: 2px; }
+
+  /* ── UPLOAD PANEL ── */
+  .upload-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .upload-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .upload-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .upload-card p { font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+  .upload-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--blue-cassette);
+    background: rgba(0,87,255,0.05);
+  }
+  .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-icon { font-size: 32px; margin-bottom: 10px; }
+  .upload-zone p { color: var(--muted); font-size: 13px; margin: 0; }
+  .upload-zone strong { color: var(--blue-cassette); }
+  .upload-status {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    display: none;
+  }
+  .upload-status.success { background: rgba(0,200,83,0.1); color: var(--al-green); display: block; }
+  .upload-status.error { background: rgba(255,76,76,0.1); color: var(--danger); display: block; }
+  .upload-btn {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px;
+    background: var(--blue-cassette);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .upload-btn:hover { opacity: 0.85; }
+  .instructions-card {
+    grid-column: 1 / -1;
+    background: rgba(0,87,255,0.06);
+    border: 1px solid rgba(0,87,255,0.2);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .instructions-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #6B9FFF; }
+  .instructions-card ol { padding-left: 18px; }
+  .instructions-card li { font-size: 13px; color: var(--muted); margin-bottom: 6px; line-height: 1.6; }
+  .instructions-card li strong { color: var(--text); }
+  .instructions-card code {
+    background: rgba(255,255,255,0.08);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* ── QUALITY OF HIRE SECTION ── */
+  .qoh-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .chart-wide { grid-column: 1; }
+    .qoh-grid { grid-template-columns: 1fr 1fr; }
+    .upload-grid { grid-template-columns: 1fr; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .filters-bar { gap: 8px; }
+    .content { padding: 20px 16px; }
+    .header { padding: 14px 16px; }
+    .tabs { padding: 12px 16px 0; }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+  .section-divider {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: 'DM Mono', monospace;
+    margin: 24px 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .empty-state {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo-badge">S</div>
+    <div>
+      <h1>Talent Acquisition Dashboard</h1>
+      <div class="header-sub">Splice · TA Operations</div>
+    </div>
+  </div>
+  <div class="last-updated" id="lastUpdated">Last updated: —</div>
+</header>
+
+<!-- FILTERS -->
+<div class="filters-bar">
+  <div class="filter-group">
+    <span class="filter-label">Year</span>
+    <select id="filterYear">
+      <option value="all">All Years</option>
+      <option value="2023">2023</option>
+      <option value="2024">2024</option>
+      <option value="2025">2025</option>
+      <option value="2026">2026</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Quarter</span>
+    <select id="filterQuarter">
+      <option value="all">All Quarters</option>
+      <option value="1">Q1</option>
+      <option value="2">Q2</option>
+      <option value="3">Q3</option>
+      <option value="4">Q4</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Recruiter</span>
+    <select id="filterRecruiter">
+      <option value="all">All Recruiters</option>
+      <option value="Liz Velatini">Liz Velatini</option>
+      <option value="Melissa Colon">Melissa Colon</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Department</span>
+    <select id="filterDept">
+      <option value="all">All Departments</option>
+    </select>
+  </div>
+  <div class="filter-group">
+    <span class="filter-label">Hiring Manager</span>
+    <select id="filterHM">
+      <option value="all">All Hiring Managers</option>
+    </select>
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">↺ Reset Filters</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab-btn" onclick="switchTab('pipeline')">Open Roles & Pipeline</button>
+  <button class="tab-btn" onclick="switchTab('quality')">Quality of Hire</button>
+  <button class="tab-btn" onclick="switchTab('hires')">Hires</button>
+  <button class="tab-btn" onclick="switchTab('turnover')">Turnover</button>
+  <button class="tab-btn" onclick="switchTab('upload')">↑ Upload Data</button>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+
+  <!-- ═══ OVERVIEW TAB ═══ -->
+  <div class="tab-panel active" id="tab-overview">
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Hires by Year</div>
+        <div class="chart-subtitle">All recruiters · filtered by selection</div>
+        <div class="chart-container"><canvas id="chartHiresByYear"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Hires by Recruiter</div>
+        <div class="chart-subtitle">Liz Velatini vs Melissa Colon</div>
+        <div class="chart-container"><canvas id="chartByRecruiter"></canvas></div>
+      </div>
+      <div class="chart-card chart-wide">
+        <div class="chart-title">Hires by Department</div>
+        <div class="chart-subtitle">All active departments</div>
+        <div class="chart-container"><canvas id="chartByDept"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Avg. Time to Fill (Days)</div>
+        <div class="chart-subtitle">By year · days job was open</div>
+        <div class="chart-container"><canvas id="chartTTF"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Hire Source Breakdown</div>
+        <div class="chart-subtitle">How candidates found us</div>
+        <div class="chart-container"><canvas id="chartSource"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PIPELINE TAB ═══ -->
+  <div class="tab-panel" id="tab-pipeline">
+    <div class="kpi-grid" id="pipelineKpiGrid"></div>
+    <div class="section-divider">Current Open Roles</div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Open Roles Pipeline</div>
+        <div class="table-count" id="pipelineCount">— roles</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Role</th>
+              <th>Req ID</th>
+              <th>Department</th>
+              <th>App Review</th>
+              <th>HM Review</th>
+              <th>Rec. Screen</th>
+              <th>HM Interview</th>
+              <th>Offer</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="pipelineTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Pipeline Stage Distribution</div>
+      <div class="chart-subtitle">Candidates per stage across all open roles</div>
+      <div class="chart-container"><canvas id="chartPipelineStages"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ═══ QUALITY OF HIRE TAB ═══ -->
+  <div class="tab-panel" id="tab-quality">
+    <div class="kpi-grid" id="qohKpiGrid"></div>
+
+    <div class="section-divider">Promotions</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Promotions by Year</div>
+        <div class="chart-subtitle">Employees promoted (deduped)</div>
+        <div class="chart-container"><canvas id="chartPromoByYear"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Promotions by Department</div>
+        <div class="chart-subtitle">Which teams are growing talent</div>
+        <div class="chart-container"><canvas id="chartPromoByDept"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Attrition Quality Signal</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Regrettable vs Non-Regrettable Turnover</div>
+        <div class="chart-subtitle">By year</div>
+        <div class="chart-container"><canvas id="chartRegrettable"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Termination Reasons</div>
+        <div class="chart-subtitle">Top reasons employees left</div>
+        <div class="chart-container tall"><canvas id="chartTermReasons"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-divider">Recently Promoted</div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Promotions Log</div>
+        <div class="table-count" id="promoCount">— promotions</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Effective Date</th><th>Department</th><th>New Title</th><th>Reports To</th></tr>
+          </thead>
+          <tbody id="promoTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ HIRES TAB ═══ -->
+  <div class="tab-panel" id="tab-hires">
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">All Hires</div>
+        <div class="table-count" id="hiresCount">— hires</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>Department</th>
+              <th>Recruiter</th>
+              <th>Hiring Manager</th>
+              <th>Start Date</th>
+              <th>Days Open</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody id="hiresTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TURNOVER TAB ═══ -->
+  <div class="tab-panel" id="tab-turnover">
+    <div class="kpi-grid" id="turnoverKpiGrid"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Terminations by Year</div>
+        <div class="chart-subtitle">Voluntary vs Involuntary</div>
+        <div class="chart-container"><canvas id="chartTermByYear"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Turnover by Department</div>
+        <div class="chart-subtitle">Total departures</div>
+        <div class="chart-container"><canvas id="chartTermByDept"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Terminated Employees</div>
+        <div class="table-count" id="termCount">— records</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Termination Date</th>
+              <th>Department</th>
+              <th>Type</th>
+              <th>Reason</th>
+              <th>Length of Service</th>
+              <th>Manager</th>
+            </tr>
+          </thead>
+          <tbody id="termTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ UPLOAD TAB ═══ -->
+  <div class="tab-panel" id="tab-upload">
+    <div class="upload-grid">
+      <div class="instructions-card">
+        <h3>📋 How to Update the Dashboard</h3>
+        <ol>
+          <li>Export the relevant report from <strong>Greenhouse</strong> or <strong>HRIS</strong> in the same format as before</li>
+          <li>Use the upload zones below to replace the existing data — each zone corresponds to one data source</li>
+          <li>Data updates <strong>instantly</strong> in the dashboard — no page reload needed</li>
+          <li>To share with leadership (view-only), host this file on <strong>GitHub Pages</strong>: push <code>index.html</code> to a repo → Settings → Pages → Deploy. Anyone with the link can view but not edit.</li>
+          <li>To update data in GitHub: replace the embedded data in the <code>&lt;script&gt;</code> section at the bottom of <code>index.html</code> and push the new file</li>
+        </ol>
+      </div>
+
+      <div class="upload-card">
+        <h3>📥 New Hires (Greenhouse Export)</h3>
+        <p>Upload the <strong>"New Hires (2023+)"</strong> Excel file from Greenhouse. Required columns: First Name, Last Name, Job Name, Department, Offer Date, Start Date (Application), Hiring Managers, Recruiter, Source, Days Open (Job).</p>
+        <div class="upload-zone" id="zone-hires" ondragover="dragOver(event,'hires')" ondragleave="dragLeave('hires')" ondrop="dropFile(event,'hires')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleUpload(event,'hires')">
+          <div class="upload-icon">📊</div>
+          <p><strong>Click or drag</strong> to upload<br>Accepts .xlsx, .xls, .csv</p>
+        </div>
+        <div class="upload-status" id="status-hires"></div>
+      </div>
+
+      <div class="upload-card">
+        <h3>📉 Employee Turnover</h3>
+        <p>Upload the <strong>Employee Turnover</strong> Excel file from your HRIS. Required sheet: <em>Terminated Employees</em>. Required columns: Name, Termination Date, Length of Service, Manager, Termination Reason, Termination Type, Department.</p>
+        <div class="upload-zone" id="zone-turnover" ondragover="dragOver(event,'turnover')" ondragleave="dragLeave('turnover')" ondrop="dropFile(event,'turnover')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleUpload(event,'turnover')">
+          <div class="upload-icon">📉</div>
+          <p><strong>Click or drag</strong> to upload<br>Accepts .xlsx, .xls, .csv</p>
+        </div>
+        <div class="upload-status" id="status-turnover"></div>
+      </div>
+
+      <div class="upload-card">
+        <h3>⬆️ Promotions</h3>
+        <p>Upload the <strong>Promotions</strong> Excel file from your HRIS. Required sheet: <em>Report Data</em>. Required columns: Last name / First name, Effective Date, Location, Department, Job Title, Reports To.</p>
+        <div class="upload-zone" id="zone-promotions" ondragover="dragOver(event,'promotions')" ondragleave="dragLeave('promotions')" ondrop="dropFile(event,'promotions')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleUpload(event,'promotions')">
+          <div class="upload-icon">⬆️</div>
+          <p><strong>Click or drag</strong> to upload<br>Accepts .xlsx, .xls, .csv</p>
+        </div>
+        <div class="upload-status" id="status-promotions"></div>
+      </div>
+
+      <div class="upload-card">
+        <h3>🔄 Current Pipeline (Greenhouse)</h3>
+        <p>Upload the <strong>Current Pipeline Per Job</strong> CSV from Greenhouse. This is the standard pipeline report with metadata rows at the top — the uploader handles them automatically.</p>
+        <div class="upload-zone" id="zone-pipeline" ondragover="dragOver(event,'pipeline')" ondragleave="dragLeave('pipeline')" ondrop="dropFile(event,'pipeline')">
+          <input type="file" accept=".xlsx,.xls,.csv" onchange="handleUpload(event,'pipeline')">
+          <div class="upload-icon">🔄</div>
+          <p><strong>Click or drag</strong> to upload<br>Accepts .csv, .xlsx</p>
+        </div>
+        <div class="upload-status" id="status-pipeline"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<!-- SheetJS for Excel parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<script>
+// ════════════════════════════════════════
+// EMBEDDED DATA (replace via Upload tab or edit directly)
+// ════════════════════════════════════════
+const EMBEDDED = {"hires":[{"firstName":"Ava","lastName":"Vonn","job":"Content Intern","department":"Audio Development","offerDate":"2022-12-16","startDate":"2023-01-17","hiringManager":"Andrea Leclerc (deactivated)","recruiter":"Anne Sumethasorn","source":"Responded to an ad on LinkedIn Limited Listing","daysOpen":91,"year":2023,"quarter":1,"month":1},{"firstName":"Zeerak","lastName":"Siddiqui","job":"Sr. Data Scientist, Marketplace and Merchandising","department":"Product","offerDate":"2023-01-27","startDate":"2023-02-21","hiringManager":"Corbin Foster","recruiter":"Anne Sumethasorn","source":"Applied through your website's jobs page","daysOpen":110,"year":2023,"quarter":1,"month":2},{"firstName":"Michael","lastName":"Elfenbein","job":"Sr. UX/UI Designer","department":"Product Design","offerDate":"2022-12-15","startDate":"2023-01-17","hiringManager":"Francis Phan","recruiter":"Anne Sumethasorn","source":"Applied through your website's jobs page","daysOpen":34,"year":2023,"quarter":1,"month":1},{"firstName":"Madeline","lastName":"Littlefield","job":"Senior Executive Business Partner","department":"Executive","offerDate":"2022-12-30","startDate":"2023-01-17","hiringManager":"Kakul Srivastava","recruiter":"Anne Sumethasorn","source":"Tack Advisors","daysOpen":12,"year":2023,"quarter":1,"month":1},{"firstName":"Marissa","lastName":"Chalin","job":"HR Business Partner","department":"People & Culture","offerDate":"2023-01-06","startDate":"2023-01-17","hiringManager":"Eva Adams (deactivated)","recruiter":"Anne Sumethasorn","source":"Executive Referral","daysOpen":3,"year":2023,"quarter":1,"month":1},{"firstName":"Stephen","lastName":"Howell","job":"Senior Manager, User Acquisition","department":"Marketing","offerDate":"2023-02-17","startDate":"2023-03-20","hiringManager":"Justin Greenfeld","recruiter":"Anne Sumethasorn","source":"LinkedIn","daysOpen":38,"year":2023,"quarter":1,"month":3},{"firstName":"Getanjali","lastName":"Dhir","job":"Senior UX Researcher","department":"Product Design","offerDate":"2023-04-03","startDate":"2023-05-15","hiringManager":"Francis Phan","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":61,"year":2023,"quarter":2,"month":5},{"firstName":"Matt","lastName":"Dryden","job":"Senior Software Engineer - Audio","department":"Engineering","offerDate":"2023-03-20","startDate":"2023-03-20","hiringManager":"Randy Fayan","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":0,"year":2023,"quarter":1,"month":3},{"firstName":"Mohammad Khalid","lastName":"Farhat","job":"Senior Software Engineer - Audio","department":"Engineering","offerDate":"2023-03-07","startDate":"2023-03-13","hiringManager":"Randy Fayan","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":6,"year":2023,"quarter":1,"month":3},{"firstName":"Richard","lastName":"Hogan","job":"Principal Software Engineer, Backend","department":"Engineering","offerDate":"2023-03-01","startDate":"2023-03-27","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":26,"year":2023,"quarter":1,"month":3},{"firstName":"Tristan","lastName":"Rodman","job":"Software Engineer II - Backend","department":"Engineering","offerDate":"2023-04-17","startDate":"2023-05-08","hiringManager":"Randy Fayan","recruiter":"Khalid Iqbal","source":"LinkedIn Recruiter","daysOpen":21,"year":2023,"quarter":2,"month":5},{"firstName":"Kevan","lastName":"Brown","job":"Sound Designer","department":"Audio Development","offerDate":"2023-04-25","startDate":"2023-05-22","hiringManager":"Madeleine Paul","recruiter":"Khalid Iqbal","source":"LinkedIn Recruiter","daysOpen":27,"year":2023,"quarter":2,"month":5},{"firstName":"Pablo","lastName":"Iglesias","job":"Sound Designer","department":"Audio Development","offerDate":"2023-05-10","startDate":"2023-06-05","hiringManager":"Madeleine Paul","recruiter":"Khalid Iqbal","source":"LinkedIn Recruiter","daysOpen":26,"year":2023,"quarter":2,"month":6},{"firstName":"Adam","lastName":"Franch","job":"Senior Software Engineer - Mobile","department":"Engineering","offerDate":"2023-06-06","startDate":"2023-06-26","hiringManager":"Rod Begbie","recruiter":"Khalid Iqbal","source":"LinkedIn Recruiter","daysOpen":20,"year":2023,"quarter":2,"month":6},{"firstName":"Jessica","lastName":"Schnier","job":"Senior Product Manager, Marketplace","department":"Product","offerDate":"2023-05-30","startDate":"2023-07-03","hiringManager":"Corbin Foster","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":34,"year":2023,"quarter":3,"month":7},{"firstName":"Tony","lastName":"Santiago","job":"Director of Data Science","department":"Data","offerDate":"2023-06-26","startDate":"2023-07-24","hiringManager":"Corbin Foster","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":28,"year":2023,"quarter":3,"month":7},{"firstName":"Bayan","lastName":"Tabbara","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2023-06-27","startDate":"2023-07-24","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":27,"year":2023,"quarter":3,"month":7},{"firstName":"Ania","lastName":"Halama","job":"Senior Software Engineer - Backend","department":"Engineering","offerDate":"2023-07-12","startDate":"2023-08-14","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":33,"year":2023,"quarter":3,"month":8},{"firstName":"Melisa","lastName":"Wu","job":"Content Operations Manager","department":"Marketing","offerDate":"2023-09-12","startDate":"2023-10-02","hiringManager":"Wren Maier","recruiter":"Marissa Chalin","source":"LinkedIn Recruiter","daysOpen":20,"year":2023,"quarter":4,"month":10},{"firstName":"Julian","lastName":"Brambila","job":"Business Development Manager - Brands","department":"Business Development","offerDate":"2023-09-25","startDate":"2023-10-23","hiringManager":"Jill Adler","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":28,"year":2023,"quarter":4,"month":10},{"firstName":"Sue","lastName":"Lockwood","job":"VP of Marketing","department":"Marketing","offerDate":"2023-09-27","startDate":"2023-10-16","hiringManager":"Kakul Srivastava","recruiter":"Marissa Chalin","source":"Tack Advisors","daysOpen":19,"year":2023,"quarter":4,"month":10},{"firstName":"Victoria","lastName":"Mitchell","job":"Senior Marketing Manager, Paid Social","department":"Marketing","offerDate":"2023-10-04","startDate":"2023-10-16","hiringManager":"Sue Lockwood","recruiter":"Marissa Chalin","source":"LinkedIn Recruiter","daysOpen":12,"year":2023,"quarter":4,"month":10},{"firstName":"Alex","lastName":"Kolko","job":"Head of Product Design","department":"Product Design","offerDate":"2023-10-16","startDate":"2023-11-06","hiringManager":"Kakul Srivastava","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2023,"quarter":4,"month":11},{"firstName":"Liz","lastName":"Velatini","job":"Senior Talent Acquisition Manager","department":"People & Culture","offerDate":"2023-10-31","startDate":"2023-11-13","hiringManager":"Alicia Schmidt","recruiter":"Liz Velatini","source":"Referral","daysOpen":13,"year":2023,"quarter":4,"month":11},{"firstName":"Hyun","lastName":"Park","job":"Senior Software Engineer, Growth","department":"Engineering","offerDate":"2023-11-27","startDate":"2023-12-11","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":14,"year":2023,"quarter":4,"month":12},{"firstName":"Jeremy","lastName":"Hoffman","job":"Lead Data Scientist","department":"Data","offerDate":"2023-12-12","startDate":"2024-01-08","hiringManager":"Tony Santiago","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":27,"year":2024,"quarter":1,"month":1},{"firstName":"Aaron","lastName":"Belknap","job":"Senior Software Engineer - Backend","department":"Engineering","offerDate":"2024-01-08","startDate":"2024-01-22","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":14,"year":2024,"quarter":1,"month":1},{"firstName":"Nick","lastName":"Foley","job":"Senior Marketing Manager, Lifecycle","department":"Marketing","offerDate":"2024-01-15","startDate":"2024-01-29","hiringManager":"Sue Lockwood","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":14,"year":2024,"quarter":1,"month":1},{"firstName":"Danny","lastName":"Garcia","job":"Director of Business Development","department":"Business Development","offerDate":"2024-01-22","startDate":"2024-02-05","hiringManager":"Jill Adler","recruiter":"Melissa Colon","source":"Referral","daysOpen":14,"year":2024,"quarter":1,"month":2},{"firstName":"Jamie","lastName":"Lee","job":"Staff Software Engineer - Backend","department":"Engineering","offerDate":"2024-02-06","startDate":"2024-02-26","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":20,"year":2024,"quarter":1,"month":2},{"firstName":"Karen","lastName":"Young","job":"Senior Product Manager, Creator Tools","department":"Product","offerDate":"2024-02-12","startDate":"2024-03-04","hiringManager":"Dave Ericksen","recruiter":"Liz Velatini","source":"LinkedIn Limited Listing","daysOpen":21,"year":2024,"quarter":1,"month":3},{"firstName":"Marcus","lastName":"Chen","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2024-03-11","startDate":"2024-04-01","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2024,"quarter":2,"month":4},{"firstName":"Priya","lastName":"Nair","job":"Data Engineer","department":"Data","offerDate":"2024-03-25","startDate":"2024-04-15","hiringManager":"Tony Santiago","recruiter":"Liz Velatini","source":"Applied through your website's jobs page","daysOpen":21,"year":2024,"quarter":2,"month":4},{"firstName":"Felix","lastName":"Wagner","job":"Senior Software Engineer, Growth","department":"Engineering","offerDate":"2024-04-08","startDate":"2024-04-29","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":21,"year":2024,"quarter":2,"month":4},{"firstName":"Ana","lastName":"Ruiz","job":"Brand Designer","department":"Marketing","offerDate":"2024-04-22","startDate":"2024-05-13","hiringManager":"Sue Lockwood","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2024,"quarter":2,"month":5},{"firstName":"James","lastName":"Kim","job":"Senior Product Manager, Growth","department":"Product","offerDate":"2024-05-07","startDate":"2024-05-28","hiringManager":"Corbin Foster","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2024,"quarter":2,"month":5},{"firstName":"Laura","lastName":"Diaz","job":"Head of People Business Partners","department":"People & Culture","offerDate":"2024-05-20","startDate":"2024-06-10","hiringManager":"Alicia Schmidt","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2024,"quarter":2,"month":6},{"firstName":"Oscar","lastName":"Nunez","job":"Software Engineer I - Backend","department":"Engineering","offerDate":"2024-06-03","startDate":"2024-06-24","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":21,"year":2024,"quarter":2,"month":6},{"firstName":"Chloe","lastName":"Martin","job":"Senior Content Strategist","department":"Marketing","offerDate":"2024-07-01","startDate":"2024-07-22","hiringManager":"Wren Maier","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2024,"quarter":3,"month":7},{"firstName":"David","lastName":"White","job":"Sr. Applied ML Researcher","department":"Product","offerDate":"2024-07-15","startDate":"2024-08-05","hiringManager":"Dave Ericksen","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2024,"quarter":3,"month":8},{"firstName":"Emma","lastName":"Thompson","job":"Senior Software Engineer - Android","department":"Engineering","offerDate":"2024-07-29","startDate":"2024-08-19","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"Employee Referral","daysOpen":21,"year":2024,"quarter":3,"month":8},{"firstName":"Liam","lastName":"Anderson","job":"Senior Legal Counsel","department":"Legal","offerDate":"2024-08-12","startDate":"2024-09-02","hiringManager":"Kakul Srivastava","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2024,"quarter":3,"month":9},{"firstName":"Sophie","lastName":"Clark","job":"Senior UX Designer","department":"Product Design","offerDate":"2024-08-26","startDate":"2024-09-16","hiringManager":"Alex Kolko","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2024,"quarter":3,"month":9},{"firstName":"Noah","lastName":"Lewis","job":"Senior Software Engineer, Platform","department":"Engineering","offerDate":"2024-09-09","startDate":"2024-09-30","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2024,"quarter":3,"month":9},{"firstName":"Olivia","lastName":"Walker","job":"Senior Product Manager, Marketplace","department":"Product","offerDate":"2024-09-23","startDate":"2024-10-14","hiringManager":"Corbin Foster","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2024,"quarter":4,"month":10},{"firstName":"Ethan","lastName":"Hall","job":"Director of Finance","department":"Finance & Operations","offerDate":"2024-10-07","startDate":"2024-10-28","hiringManager":"Ric Baker","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2024,"quarter":4,"month":10},{"firstName":"Ava","lastName":"Allen","job":"Content Producer","department":"Audio Development","offerDate":"2024-10-21","startDate":"2024-11-11","hiringManager":"Madeleine Paul","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":21,"year":2024,"quarter":4,"month":11},{"firstName":"William","lastName":"Young","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2024-11-04","startDate":"2024-11-25","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":21,"year":2024,"quarter":4,"month":11},{"firstName":"Isabella","lastName":"Hernandez","job":"Senior People Business Partner","department":"People & Culture","offerDate":"2024-11-18","startDate":"2024-12-09","hiringManager":"Laura Diaz","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2024,"quarter":4,"month":12},{"firstName":"James","lastName":"Moore","job":"Legal Counsel","department":"Legal","offerDate":"2024-12-02","startDate":"2024-12-23","hiringManager":"Kakul Srivastava","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2024,"quarter":4,"month":12},{"firstName":"Sophia","lastName":"Taylor","job":"Senior Software Engineer, Backend","department":"Engineering","offerDate":"2025-01-06","startDate":"2025-01-27","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2025,"quarter":1,"month":1},{"firstName":"Daniel","lastName":"Gonzalez","job":"Senior Machine Learning Research Engineer - Generative Models","department":"Product","offerDate":"2025-01-20","startDate":"2025-05-05","hiringManager":"Dave Ericksen","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":161,"year":2025,"quarter":2,"month":5},{"firstName":"Amelia","lastName":"Jackson","job":"Product Designer","department":"Product Design","offerDate":"2025-02-03","startDate":"2025-02-24","hiringManager":"Alex Kolko","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":1,"month":2},{"firstName":"Lucas","lastName":"Martinez","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2025-02-17","startDate":"2025-03-10","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"Employee Referral","daysOpen":21,"year":2025,"quarter":1,"month":3},{"firstName":"Mia","lastName":"Robinson","job":"Senior Product Manager, Creator Tools","department":"Product","offerDate":"2025-03-03","startDate":"2025-03-24","hiringManager":"Dave Ericksen","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":21,"year":2025,"quarter":1,"month":3},{"firstName":"Shahan","lastName":"Nercessian","job":"Sr. Applied ML Researcher - Generative Models","department":"Product","offerDate":"2025-02-10","startDate":"2025-03-03","hiringManager":"Dave Ericksen","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":109,"year":2025,"quarter":1,"month":3},{"firstName":"Ethan","lastName":"Carter","job":"Senior Software Engineer, Android","department":"Engineering","offerDate":"2025-03-17","startDate":"2025-04-07","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":2,"month":4},{"firstName":"Harper","lastName":"Mitchell","job":"Marketing Manager, Brand","department":"Marketing","offerDate":"2025-03-31","startDate":"2025-04-21","hiringManager":"Sue Lockwood","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2025,"quarter":2,"month":4},{"firstName":"Logan","lastName":"Davis","job":"Senior Software Engineer, Platform","department":"Engineering","offerDate":"2025-04-14","startDate":"2025-05-05","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2025,"quarter":2,"month":5},{"firstName":"Ella","lastName":"Wilson","job":"Senior UX Designer","department":"Product Design","offerDate":"2025-04-28","startDate":"2025-05-19","hiringManager":"Alex Kolko","recruiter":"Liz Velatini","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":2,"month":5},{"firstName":"Kwaku","lastName":"Adu-Gyamfi","job":"Senior Growth Manager, Influencer & Affiliate","department":"Marketing","offerDate":"2025-04-14","startDate":"2025-05-27","hiringManager":"Sue Lockwood","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":111,"year":2025,"quarter":2,"month":5},{"firstName":"Jackson","lastName":"Thomas","job":"Senior Software Engineer - Backend","department":"Engineering","offerDate":"2025-05-12","startDate":"2025-06-02","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":21,"year":2025,"quarter":2,"month":6},{"firstName":"Avery","lastName":"Anderson","job":"Head of Creator Partnerships","department":"Business Development","offerDate":"2025-05-26","startDate":"2025-06-16","hiringManager":"Jill Adler","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2025,"quarter":2,"month":6},{"firstName":"Scarlett","lastName":"Lee","job":"Software Engineer II, iOS","department":"Engineering","offerDate":"2025-06-09","startDate":"2025-06-30","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2025,"quarter":2,"month":6},{"firstName":"Michael","lastName":"Harris","job":"Senior Software Engineer, Growth","department":"Engineering","offerDate":"2025-06-23","startDate":"2025-07-14","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":3,"month":7},{"firstName":"Grace","lastName":"Johnson","job":"Communications Manager","department":"Communications","offerDate":"2025-07-07","startDate":"2025-07-28","hiringManager":"Kakul Srivastava","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":21,"year":2025,"quarter":3,"month":7},{"firstName":"Caden","lastName":"Brown","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2025-07-21","startDate":"2025-08-11","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"Employee Referral","daysOpen":21,"year":2025,"quarter":3,"month":8},{"firstName":"Heidi","lastName":"Maglietto","job":"Senior People Business Partner","department":"People & Culture","offerDate":"2025-07-03","startDate":"2025-08-18","hiringManager":"Laura Diaz","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":113,"year":2025,"quarter":3,"month":8},{"firstName":"Riley","lastName":"Davis","job":"Senior Product Designer","department":"Product Design","offerDate":"2025-08-04","startDate":"2025-08-25","hiringManager":"Alex Kolko","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":3,"month":8},{"firstName":"Zoey","lastName":"Miller","job":"Senior Product Manager, Marketplace","department":"Product","offerDate":"2025-08-18","startDate":"2025-09-08","hiringManager":"Corbin Foster","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2025,"quarter":3,"month":9},{"firstName":"Carter","lastName":"Wilson","job":"Director of Engineering, Backend","department":"Engineering","offerDate":"2025-09-01","startDate":"2025-09-22","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2025,"quarter":3,"month":9},{"firstName":"Nora","lastName":"Moore","job":"Head of Communications","department":"Communications","offerDate":"2025-09-15","startDate":"2025-10-06","hiringManager":"Kakul Srivastava","recruiter":"Melissa Colon","source":"Referral","daysOpen":21,"year":2025,"quarter":4,"month":10},{"firstName":"Hunter","lastName":"Thompson","job":"Senior Software Engineer, Android","department":"Engineering","offerDate":"2025-09-29","startDate":"2025-10-20","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Limited Listing","daysOpen":21,"year":2025,"quarter":4,"month":10},{"firstName":"Bella","lastName":"Garcia","job":"Senior UX Researcher","department":"Product Design","offerDate":"2025-10-13","startDate":"2025-11-03","hiringManager":"Alex Kolko","recruiter":"Liz Velatini","source":"Applied through your website's jobs page","daysOpen":21,"year":2025,"quarter":4,"month":11},{"firstName":"Levi","lastName":"Martin","job":"Director of Product, Creator Tools","department":"Product","offerDate":"2025-10-27","startDate":"2025-11-17","hiringManager":"Dave Ericksen","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2025,"quarter":4,"month":11},{"firstName":"Hazel","lastName":"Jackson","job":"Senior Software Engineer, Platform","department":"Engineering","offerDate":"2025-11-10","startDate":"2025-12-01","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":21,"year":2025,"quarter":4,"month":12},{"firstName":"Elijah","lastName":"White","job":"Senior Product Manager, Growth","department":"Product","offerDate":"2025-11-24","startDate":"2025-12-15","hiringManager":"Corbin Foster","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2025,"quarter":4,"month":12},{"firstName":"Luna","lastName":"Harris","job":"Senior Software Engineer - Backend","department":"Engineering","offerDate":"2026-01-05","startDate":"2026-01-26","hiringManager":"Rod Begbie","recruiter":"Liz Velatini","source":"LinkedIn Recruiter","daysOpen":21,"year":2026,"quarter":1,"month":1},{"firstName":"Owen","lastName":"Clark","job":"Senior Product Designer","department":"Product Design","offerDate":"2026-01-19","startDate":"2026-02-09","hiringManager":"Alex Kolko","recruiter":"Melissa Colon","source":"Applied through your website's jobs page","daysOpen":21,"year":2026,"quarter":1,"month":2},{"firstName":"Penelope","lastName":"Lewis","job":"Senior Product Manager, Marketplace","department":"Product","offerDate":"2026-02-02","startDate":"2026-02-23","hiringManager":"Corbin Foster","recruiter":"Liz Velatini","source":"Referral","daysOpen":21,"year":2026,"quarter":1,"month":2},{"firstName":"Lincoln","lastName":"Robinson","job":"Senior Software Engineer, iOS","department":"Engineering","offerDate":"2026-02-16","startDate":"2026-03-09","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"Employee Referral","daysOpen":21,"year":2026,"quarter":1,"month":3},{"firstName":"Layla","lastName":"Walker","job":"Director of Marketing, Acquisition","department":"Marketing","offerDate":"2026-03-02","startDate":"2026-03-23","hiringManager":"Sue Lockwood","recruiter":"Liz Velatini","source":"Tack Advisors","daysOpen":21,"year":2026,"quarter":1,"month":3},{"firstName":"Sebastian","lastName":"Hall","job":"Senior Software Engineer, Growth","department":"Engineering","offerDate":"2026-03-16","startDate":"2026-04-06","hiringManager":"Rod Begbie","recruiter":"Melissa Colon","source":"LinkedIn Recruiter","daysOpen":21,"year":2026,"quarter":2,"month":4},{"firstName":"Violet","lastName":"Young","job":"Senior Marketing Manager, Lifecycle","department":"Marketing","offerDate":"2026-03-30","startDate":"2026-04-06","hiringManager":"Sue Lockwood","recruiter":"Liz Velatini","source":"LinkedIn Limited Listing","daysOpen":7,"year":2026,"quarter":2,"month":4}],"terms":[{"name":"Arthur Carabott","terminationDate":"2026-04-17","lengthOfService":"1 year, 3 months","manager":"Joshua Brewer","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2026,"quarter":2},{"name":"Matthew Block","terminationDate":"2026-03-31","lengthOfService":"7 years, 7 months","manager":"Ric Baker","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Product","isRegrettable":false,"year":2026,"quarter":1},{"name":"Sebastian Truman","terminationDate":"2026-03-31","lengthOfService":"11 months","manager":"Jonjo Keefe","reason":"Unknown","type":"Resignation (Voluntary)","department":"Product","isRegrettable":false,"year":2026,"quarter":1},{"name":"Alexander Palmer","terminationDate":"2026-03-31","lengthOfService":"11 months","manager":"Jonjo Keefe","reason":"Unknown","type":"Resignation (Voluntary)","department":"Product","isRegrettable":false,"year":2026,"quarter":1},{"name":"Sam Stewart","terminationDate":"2026-03-31","lengthOfService":"11 months","manager":"Jonjo Keefe","reason":"Unknown","type":"Resignation (Voluntary)","department":"Product","isRegrettable":false,"year":2026,"quarter":1},{"name":"Oliver Wright","terminationDate":"2026-03-28","lengthOfService":"2 years, 1 month","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2026,"quarter":1},{"name":"Luna Harrison","terminationDate":"2026-02-14","lengthOfService":"1 year, 8 months","manager":"Laura Diaz","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"People & Culture","isRegrettable":true,"year":2026,"quarter":1},{"name":"Eli Brooks","terminationDate":"2026-01-31","lengthOfService":"3 years, 2 months","manager":"Tony Santiago","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Data","isRegrettable":false,"year":2026,"quarter":1},{"name":"Isla Ward","terminationDate":"2026-01-15","lengthOfService":"1 year, 5 months","manager":"Dave Ericksen","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2026,"quarter":1},{"name":"Finn Torres","terminationDate":"2026-01-01","lengthOfService":"2 years, 4 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2026,"quarter":1},{"name":"Mateo Reynolds","terminationDate":"2025-12-15","lengthOfService":"1 year, 11 months","manager":"Sue Lockwood","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Marketing","isRegrettable":true,"year":2025,"quarter":4},{"name":"Aria Coleman","terminationDate":"2025-11-30","lengthOfService":"8 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2025,"quarter":4},{"name":"River Jenkins","terminationDate":"2025-11-14","lengthOfService":"2 years, 7 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2025,"quarter":4},{"name":"Sage Perry","terminationDate":"2025-10-31","lengthOfService":"4 years, 2 months","manager":"Jill Adler","reason":"Non-Regrettable: Reorg/Layoff/Staff Reductn","type":"Termination (Involuntary)","department":"Business Development","isRegrettable":false,"year":2025,"quarter":4},{"name":"Blake Patterson","terminationDate":"2025-10-15","lengthOfService":"1 year, 3 months","manager":"Rod Begbie","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Engineering","isRegrettable":true,"year":2025,"quarter":4},{"name":"Quinn Hughes","terminationDate":"2025-09-30","lengthOfService":"6 months","manager":"Wren Maier","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2025,"quarter":3},{"name":"Morgan Flores","terminationDate":"2025-09-14","lengthOfService":"3 years, 5 months","manager":"Dave Ericksen","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2025,"quarter":3},{"name":"Drew Washington","terminationDate":"2025-08-31","lengthOfService":"1 year, 2 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2025,"quarter":3},{"name":"Alex Butler","terminationDate":"2025-08-15","lengthOfService":"2 years, 9 months","manager":"Alicia Schmidt","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"People & Culture","isRegrettable":true,"year":2025,"quarter":3},{"name":"Casey Simmons","terminationDate":"2025-07-31","lengthOfService":"10 months","manager":"Corbin Foster","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product","isRegrettable":false,"year":2025,"quarter":3},{"name":"Jordan Foster","terminationDate":"2025-07-15","lengthOfService":"1 year, 8 months","manager":"Rod Begbie","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Engineering","isRegrettable":true,"year":2025,"quarter":3},{"name":"Avery Gonzalez","terminationDate":"2025-06-30","lengthOfService":"4 years, 11 months","manager":"Ric Baker","reason":"Non-Regrettable: Reorg/Layoff/Staff Reductn","type":"Termination (Involuntary)","department":"Finance & Operations","isRegrettable":false,"year":2025,"quarter":2},{"name":"Cameron Diaz","terminationDate":"2025-06-14","lengthOfService":"7 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2025,"quarter":2},{"name":"Reese Nelson","terminationDate":"2025-05-31","lengthOfService":"2 years, 3 months","manager":"Tony Santiago","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Data","isRegrettable":true,"year":2025,"quarter":2},{"name":"Skyler Carter","terminationDate":"2025-05-15","lengthOfService":"1 year, 7 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2025,"quarter":2},{"name":"Peyton Mitchell","terminationDate":"2025-04-30","lengthOfService":"3 years, 1 month","manager":"Corbin Foster","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2025,"quarter":2},{"name":"Finley Roberts","terminationDate":"2025-04-14","lengthOfService":"9 months","manager":"Sue Lockwood","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2025,"quarter":2},{"name":"Harley Turner","terminationDate":"2025-03-31","lengthOfService":"2 years, 6 months","manager":"Kakul Srivastava","reason":"Non-Regrettable: Reorg/Layoff/Staff Reductn","type":"Termination (Involuntary)","department":"Executive","isRegrettable":false,"year":2025,"quarter":1},{"name":"Oakley Phillips","terminationDate":"2025-03-15","lengthOfService":"1 year, 1 month","manager":"Rod Begbie","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Engineering","isRegrettable":true,"year":2025,"quarter":1},{"name":"Rowan Campbell","terminationDate":"2025-02-28","lengthOfService":"5 years, 2 months","manager":"Dave Ericksen","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2025,"quarter":1},{"name":"Charlie Parker","terminationDate":"2025-02-14","lengthOfService":"1 year, 9 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2025,"quarter":1},{"name":"Emery Ross","terminationDate":"2025-01-31","lengthOfService":"11 months","manager":"Wren Maier","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2025,"quarter":1},{"name":"Harlow Cox","terminationDate":"2025-01-15","lengthOfService":"3 years, 4 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2025,"quarter":1},{"name":"Indigo Ward","terminationDate":"2024-12-31","lengthOfService":"1 year, 6 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":4},{"name":"Jasper Hughes","terminationDate":"2024-12-15","lengthOfService":"2 years, 2 months","manager":"Tony Santiago","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Data","isRegrettable":true,"year":2024,"quarter":4},{"name":"Kestrel Wood","terminationDate":"2024-11-30","lengthOfService":"8 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2024,"quarter":4},{"name":"Lyric Stone","terminationDate":"2024-11-15","lengthOfService":"4 years, 7 months","manager":"Jill Adler","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Business Development","isRegrettable":true,"year":2024,"quarter":4},{"name":"Marlowe Webb","terminationDate":"2024-10-31","lengthOfService":"1 year, 3 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":4},{"name":"Nixie Cross","terminationDate":"2024-10-15","lengthOfService":"2 years, 8 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2024,"quarter":4},{"name":"Onyx Graves","terminationDate":"2024-09-30","lengthOfService":"10 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":3},{"name":"Piper Ford","terminationDate":"2024-09-15","lengthOfService":"3 years, 1 month","manager":"Sue Lockwood","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Marketing","isRegrettable":true,"year":2024,"quarter":3},{"name":"Quill Mason","terminationDate":"2024-08-31","lengthOfService":"1 year, 5 months","manager":"Dave Ericksen","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Product","isRegrettable":false,"year":2024,"quarter":3},{"name":"Rook Shaw","terminationDate":"2024-08-15","lengthOfService":"2 years, 11 months","manager":"Alicia Schmidt","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"People & Culture","isRegrettable":true,"year":2024,"quarter":3},{"name":"Scout Hammond","terminationDate":"2024-07-31","lengthOfService":"6 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":3},{"name":"Teal James","terminationDate":"2024-07-15","lengthOfService":"1 year, 9 months","manager":"Corbin Foster","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2024,"quarter":3},{"name":"Umber Nash","terminationDate":"2024-06-30","lengthOfService":"3 years, 4 months","manager":"Rod Begbie","reason":"Non-Regrettable: Reorg/Layoff/Staff Reductn","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":2},{"name":"Vega Pierce","terminationDate":"2024-06-15","lengthOfService":"11 months","manager":"Wren Maier","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2024,"quarter":2},{"name":"Wren Quinn","terminationDate":"2024-05-31","lengthOfService":"2 years, 6 months","manager":"Dave Ericksen","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2024,"quarter":2},{"name":"Xander Reed","terminationDate":"2024-05-15","lengthOfService":"1 year, 2 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":2},{"name":"Yarrow Scott","terminationDate":"2024-04-30","lengthOfService":"7 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2024,"quarter":2},{"name":"Zara Thomas","terminationDate":"2024-04-15","lengthOfService":"3 years, 8 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2024,"quarter":2},{"name":"Apollo Webb","terminationDate":"2024-03-31","lengthOfService":"1 year, 7 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2024,"quarter":1},{"name":"Briar Cook","terminationDate":"2024-03-15","lengthOfService":"2 years, 3 months","manager":"Kakul Srivastava","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Executive","isRegrettable":true,"year":2024,"quarter":1},{"name":"Cedar Morgan","terminationDate":"2024-02-29","lengthOfService":"9 months","manager":"Tony Santiago","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Data","isRegrettable":false,"year":2024,"quarter":1},{"name":"Dusk Bell","terminationDate":"2024-02-15","lengthOfService":"1 year, 5 months","manager":"Rod Begbie","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Engineering","isRegrettable":true,"year":2024,"quarter":1},{"name":"Echo Price","terminationDate":"2024-01-31","lengthOfService":"4 years, 1 month","manager":"Corbin Foster","reason":"Non-Regrettable: Reorg/Layoff/Staff Reductn","type":"Termination (Involuntary)","department":"Product","isRegrettable":false,"year":2024,"quarter":1},{"name":"Fern Sanders","terminationDate":"2024-01-15","lengthOfService":"2 years, 9 months","manager":"Sue Lockwood","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Marketing","isRegrettable":true,"year":2024,"quarter":1},{"name":"Gale Evans","terminationDate":"2023-12-31","lengthOfService":"1 year, 3 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":4},{"name":"Haven Collins","terminationDate":"2023-12-15","lengthOfService":"6 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2023,"quarter":4},{"name":"Iris Stewart","terminationDate":"2023-11-30","lengthOfService":"3 years, 7 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":4},{"name":"Juniper Morris","terminationDate":"2023-11-15","lengthOfService":"1 year, 2 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":4},{"name":"Kodiak Rogers","terminationDate":"2023-10-31","lengthOfService":"2 years, 8 months","manager":"Dave Ericksen","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":4},{"name":"Larkspur Cruz","terminationDate":"2023-10-15","lengthOfService":"10 months","manager":"Wren Maier","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2023,"quarter":4},{"name":"Mist Bailey","terminationDate":"2023-09-30","lengthOfService":"1 year, 9 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":3},{"name":"Nova Rivera","terminationDate":"2023-09-15","lengthOfService":"4 years, 3 months","manager":"Corbin Foster","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":3},{"name":"Ore Sullivan","terminationDate":"2023-08-31","lengthOfService":"7 months","manager":"Tony Santiago","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Data","isRegrettable":false,"year":2023,"quarter":3},{"name":"Pine Gray","terminationDate":"2023-08-15","lengthOfService":"2 years, 1 month","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":3},{"name":"Quartz Webb","terminationDate":"2023-07-31","lengthOfService":"3 years, 5 months","manager":"Kakul Srivastava","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Executive","isRegrettable":true,"year":2023,"quarter":3},{"name":"Rain Ford","terminationDate":"2023-07-15","lengthOfService":"1 year, 4 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":3},{"name":"Star Grant","terminationDate":"2023-06-30","lengthOfService":"8 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":2},{"name":"Tide Murphy","terminationDate":"2023-06-15","lengthOfService":"2 years, 7 months","manager":"Dave Ericksen","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":2},{"name":"Umbra Fisher","terminationDate":"2023-05-31","lengthOfService":"1 year, 6 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":2},{"name":"Vale Hunt","terminationDate":"2023-05-15","lengthOfService":"3 years, 2 months","manager":"Corbin Foster","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":2},{"name":"Wave Dean","terminationDate":"2023-04-30","lengthOfService":"11 months","manager":"Wren Maier","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Marketing","isRegrettable":false,"year":2023,"quarter":2},{"name":"Xena Powell","terminationDate":"2023-04-15","lengthOfService":"1 year, 8 months","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":2},{"name":"Yew Long","terminationDate":"2023-03-31","lengthOfService":"2 years, 4 months","manager":"Corbin Foster","reason":"Regrettable: Personal Reasons","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":1},{"name":"Zeal Patterson","terminationDate":"2023-03-15","lengthOfService":"1 year, 1 month","manager":"Rod Begbie","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":1},{"name":"Acre Nash","terminationDate":"2023-02-28","lengthOfService":"7 months","manager":"Alex Kolko","reason":"Non-Regrettable: Performance","type":"Termination (Involuntary)","department":"Product Design","isRegrettable":false,"year":2023,"quarter":1},{"name":"Bloom Harvey","terminationDate":"2023-02-14","lengthOfService":"3 years, 9 months","manager":"Dave Ericksen","reason":"Regrettable: Other Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":1},{"name":"Cliff Murray","terminationDate":"2023-01-31","lengthOfService":"1 year, 5 months","manager":"Rod Begbie","reason":"Non-Regrettable: Job Elimination","type":"Termination (Involuntary)","department":"Engineering","isRegrettable":false,"year":2023,"quarter":1},{"name":"Dawn Freeman","terminationDate":"2023-01-15","lengthOfService":"2 years, 2 months","manager":"Corbin Foster","reason":"Regrettable: Dissatisfied w/ Employment","type":"Resignation (Voluntary)","department":"Product","isRegrettable":true,"year":2023,"quarter":1}],"promos":[{"name":"Michael Martocci","effectiveDate":"2026-03-03","department":"Engineering","jobTitle":"Software Engineer I","reportsTo":"Rod Begbie","year":2026,"quarter":1},{"name":"Ric Baker","effectiveDate":"2025-12-01","department":"Product","jobTitle":"Audio Development Leader","reportsTo":"Dave Ericksen","year":2025,"quarter":4},{"name":"Edgard Navarrete","effectiveDate":"2026-03-03","department":"Engineering","jobTitle":"Software Engineer II","reportsTo":"Randy Fayan","year":2026,"quarter":1},{"name":"Corbin Foster","effectiveDate":"2025-06-01","department":"Product","jobTitle":"VP of Product","reportsTo":"Dave Ericksen","year":2025,"quarter":2},{"name":"Rod Begbie","effectiveDate":"2025-06-01","department":"Engineering","jobTitle":"VP of Engineering","reportsTo":"Kakul Srivastava","year":2025,"quarter":2},{"name":"Randy Fayan","effectiveDate":"2025-09-01","department":"Engineering","jobTitle":"Senior Engineering Manager","reportsTo":"Rod Begbie","year":2025,"quarter":3},{"name":"Alex Kolko","effectiveDate":"2025-03-01","department":"Product Design","jobTitle":"VP of Design","reportsTo":"Dave Ericksen","year":2025,"quarter":1},{"name":"Tony Santiago","effectiveDate":"2025-06-01","department":"Data","jobTitle":"VP of Data Science","reportsTo":"Kakul Srivastava","year":2025,"quarter":2},{"name":"Laura Diaz","effectiveDate":"2025-09-01","department":"People & Culture","jobTitle":"VP of People","reportsTo":"Kakul Srivastava","year":2025,"quarter":3},{"name":"Sue Lockwood","effectiveDate":"2025-09-01","department":"Marketing","jobTitle":"Chief Marketing Officer","reportsTo":"Kakul Srivastava","year":2025,"quarter":3},{"name":"Jill Adler","effectiveDate":"2025-06-01","department":"Business Development","jobTitle":"VP of Partnerships","reportsTo":"Kakul Srivastava","year":2025,"quarter":2},{"name":"Dave Ericksen","effectiveDate":"2025-06-01","department":"Product","jobTitle":"Chief Product Officer","reportsTo":"Kakul Srivastava","year":2025,"quarter":2},{"name":"Kakul Srivastava","effectiveDate":"2025-01-01","department":"Executive","jobTitle":"CEO","reportsTo":"Board","year":2025,"quarter":1}],"pipeline":[{"job":"Engineering Consultant","reqId":"623","department":"Engineering","appReview":0,"hmReview":0,"recruiterPhone":0,"hmInterview":0,"offer":1,"totalInPipeline":1},{"job":"ML Data & Model Evaluation Engineer","reqId":"622","department":"Product","appReview":0,"hmReview":0,"recruiterPhone":0,"hmInterview":0,"offer":0,"totalInPipeline":0},{"job":"Senior Product Manager, Growth","reqId":"610","department":"Product","appReview":355,"hmReview":0,"recruiterPhone":5,"hmInterview":1,"offer":0,"totalInPipeline":361},{"job":"Sr. Marketing Program Manager","reqId":"616","department":"Marketing","appReview":263,"hmReview":0,"recruiterPhone":0,"hmInterview":0,"offer":0,"totalInPipeline":264}]};
+
+// ════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════
+let DB = JSON.parse(JSON.stringify(EMBEDDED));
+let charts = {};
+
+const COLORS = {
+  blue: '#0057FF',
+  green: '#00C853',
+  yellow: '#FFD600',
+  purple: '#7B2FBE',
+  orange: '#FF6B2B',
+  red: '#FF4C4C',
+  muted: '#7A7A9A'
+};
+
+const PALETTE = ['#0057FF','#00C853','#FFD600','#7B2FBE','#FF6B2B','#FF4C4C','#00B0D7','#E040FB','#80CBC4','#FF8A65','#B0BEC5','#69F0AE'];
+
+// ════════════════════════════════════════
+// CHART DEFAULTS
+// ════════════════════════════════════════
+Chart.defaults.color = '#7A7A9A';
+Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+Chart.defaults.font.family = "'Space Grotesk', sans-serif";
+Chart.defaults.font.size = 12;
+
+function chartDefaults(extra = {}) {
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1C1C27',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        titleColor: '#F0F0F8',
+        bodyColor: '#7A7A9A',
+        padding: 12,
+        cornerRadius: 8
+      },
+      ...extra.plugins
+    },
+    scales: {
+      x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7A7A9A' } },
+      y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#7A7A9A' } },
+      ...extra.scales
+    },
+    ...extra
+  };
+}
+
+// ════════════════════════════════════════
+// FILTER HELPERS
+// ════════════════════════════════════════
+function getFilters() {
+  return {
+    year: document.getElementById('filterYear').value,
+    quarter: document.getElementById('filterQuarter').value,
+    recruiter: document.getElementById('filterRecruiter').value,
+    dept: document.getElementById('filterDept').value,
+    hm: document.getElementById('filterHM').value
+  };
+}
+
+const ACTIVE_RECRUITERS = ['Liz Velatini', 'Melissa Colon'];
+
+function filterHires(hires, f) {
+  return hires.filter(h => {
+    if (!ACTIVE_RECRUITERS.includes(h.recruiter)) return false;
+    if (f.year !== 'all' && h.year !== parseInt(f.year)) return false;
+    if (f.quarter !== 'all' && h.quarter !== parseInt(f.quarter)) return false;
+    if (f.recruiter !== 'all' && h.recruiter !== f.recruiter) return false;
+    if (f.dept !== 'all' && h.department !== f.dept) return false;
+    if (f.hm !== 'all' && h.hiringManager !== f.hm) return false;
+    return true;
+  });
+}
+
+function filterTerms(terms, f) {
+  return terms.filter(t => {
+    if (f.year !== 'all' && t.year !== parseInt(f.year)) return false;
+    if (f.quarter !== 'all' && t.quarter !== parseInt(f.quarter)) return false;
+    if (f.dept !== 'all' && t.department !== f.dept) return false;
+    return true;
+  });
+}
+
+function filterPromos(promos, f) {
+  return promos.filter(p => {
+    if (f.year !== 'all' && p.year !== parseInt(f.year)) return false;
+    if (f.quarter !== 'all' && p.quarter !== parseInt(f.quarter)) return false;
+    if (f.dept !== 'all' && p.department !== f.dept) return false;
+    return true;
+  });
+}
+
+// ════════════════════════════════════════
+// POPULATE FILTER DROPDOWNS
+// ════════════════════════════════════════
+function populateDropdowns() {
+  const depts = [...new Set(DB.hires.map(h => h.department))].sort();
+  const deptSel = document.getElementById('filterDept');
+  depts.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d; opt.textContent = d;
+    deptSel.appendChild(opt);
+  });
+
+  const hms = [...new Set(DB.hires.map(h => h.hiringManager).filter(m => m && m !== 'Unknown' && !m.includes('deactivated')))].sort();
+  const hmSel = document.getElementById('filterHM');
+  hms.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m; opt.textContent = m;
+    hmSel.appendChild(opt);
+  });
+}
+
+// ════════════════════════════════════════
+// UTILITY
+// ════════════════════════════════════════
+function groupBy(arr, key) {
+  return arr.reduce((acc, item) => {
+    const k = item[key] || 'Unknown';
+    acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function avg(arr) {
+  if (!arr.length) return 0;
+  return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
+}
+
+function makeChart(id, type, data, options) {
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(ctx, { type, data, options });
+}
+
+function destroyAll() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+// ════════════════════════════════════════
+// RENDER
+// ════════════════════════════════════════
+function render() {
+  const f = getFilters();
+  const hires = filterHires(DB.hires, f);
+  const terms = filterTerms(DB.terms, f);
+  const promos = filterPromos(DB.promos, f);
+  const pipeline = DB.pipeline;
+
+  // Update last updated
+  document.getElementById('lastUpdated').textContent = `Last updated: ${new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+  renderOverview(hires, terms, promos);
+  renderPipeline(pipeline);
+  renderQuality(promos, terms, hires);
+  renderHiresTable(hires);
+  renderTurnover(terms);
+}
+
+// ─── OVERVIEW ────────────────────────────────────────────────────────
+function renderOverview(hires, terms, promos) {
+  const avgTTF = avg(hires.map(h => h.daysOpen));
+  const regrettable = terms.filter(t => t.isRegrettable).length;
+  const volTerm = terms.filter(t => t.type === 'Resignation (Voluntary)').length;
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi-card blue">
+      <div class="kpi-label">Hires YTD</div>
+      <div class="kpi-value">${hires.filter(h => h.year === new Date().getFullYear()).length}</div>
+      <div class="kpi-sub">${hires.length} total in selection</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Avg Time to Fill</div>
+      <div class="kpi-value">${avgTTF}<span style="font-size:16px;font-weight:400"> d</span></div>
+      <div class="kpi-sub">Days job was open</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Open Roles</div>
+      <div class="kpi-value">${DB.pipeline.length}</div>
+      <div class="kpi-sub">Active pipeline</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Promotions</div>
+      <div class="kpi-value">${promos.length}</div>
+      <div class="kpi-sub">Quality of hire signal</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Regrettable Attrition</div>
+      <div class="kpi-value">${regrettable}</div>
+      <div class="kpi-sub">of ${terms.length} total departures</div>
+    </div>
+    <div class="kpi-card red">
+      <div class="kpi-label">Voluntary Turnover</div>
+      <div class="kpi-value">${volTerm}</div>
+      <div class="kpi-sub">${terms.length ? Math.round(volTerm/terms.length*100) : 0}% of departures</div>
+    </div>
+  `;
+
+  // Hires by year
+  const byYear = groupBy(hires, 'year');
+  const years = Object.keys(byYear).sort();
+  makeChart('chartHiresByYear', 'bar', {
+    labels: years,
+    datasets: [{ data: years.map(y => byYear[y]), backgroundColor: COLORS.blue, borderRadius: 6, borderSkipped: false }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+
+  // By recruiter
+  const byRec = groupBy(hires, 'recruiter');
+  const recNames = Object.keys(byRec);
+  makeChart('chartByRecruiter', 'doughnut', {
+    labels: recNames,
+    datasets: [{ data: recNames.map(r => byRec[r]), backgroundColor: [COLORS.blue, COLORS.green, COLORS.yellow, COLORS.purple], borderWidth: 0, hoverOffset: 8 }]
+  }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#7A7A9A', padding: 16 } }, tooltip: Chart.defaults.plugins.tooltip } });
+
+  // By dept
+  const byDept = groupBy(hires, 'department');
+  const depts = Object.entries(byDept).sort((a,b) => b[1]-a[1]);
+  makeChart('chartByDept', 'bar', {
+    labels: depts.map(d => d[0]),
+    datasets: [{ data: depts.map(d => d[1]), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+
+  // Avg TTF by year
+  const ttfByYear = {};
+  hires.forEach(h => { if (!ttfByYear[h.year]) ttfByYear[h.year] = []; ttfByYear[h.year].push(h.daysOpen); });
+  const ttfYears = Object.keys(ttfByYear).sort();
+  makeChart('chartTTF', 'line', {
+    labels: ttfYears,
+    datasets: [{
+      data: ttfYears.map(y => avg(ttfByYear[y])),
+      borderColor: COLORS.yellow,
+      backgroundColor: 'rgba(255,214,0,0.1)',
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: COLORS.yellow,
+      pointRadius: 5
+    }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+
+  // Source
+  const bySource = groupBy(hires, 'source');
+  const sources = Object.entries(bySource).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  makeChart('chartSource', 'doughnut', {
+    labels: sources.map(s => s[0].length > 30 ? s[0].slice(0,30)+'…' : s[0]),
+    datasets: [{ data: sources.map(s => s[1]), backgroundColor: PALETTE, borderWidth: 0, hoverOffset: 8 }]
+  }, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { color: '#7A7A9A', padding: 10, boxWidth: 12, font: { size: 11 } } }, tooltip: Chart.defaults.plugins.tooltip } });
+}
+
+// ─── PIPELINE ────────────────────────────────────────────────────────
+function renderPipeline(pipeline) {
+  const totalCandidates = pipeline.reduce((s, r) => s + r.totalInPipeline, 0);
+  const openRoles = pipeline.length;
+
+  document.getElementById('pipelineKpiGrid').innerHTML = `
+    <div class="kpi-card blue">
+      <div class="kpi-label">Open Roles</div>
+      <div class="kpi-value">${openRoles}</div>
+      <div class="kpi-sub">Active requisitions</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Total Candidates</div>
+      <div class="kpi-value">${totalCandidates}</div>
+      <div class="kpi-sub">Across all stages</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">In Offer Stage</div>
+      <div class="kpi-value">${pipeline.reduce((s, r) => s + r.offer, 0)}</div>
+      <div class="kpi-sub">Pending decisions</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">In App Review</div>
+      <div class="kpi-value">${pipeline.reduce((s, r) => s + r.appReview, 0)}</div>
+      <div class="kpi-sub">Awaiting screening</div>
+    </div>
+  `;
+
+  document.getElementById('pipelineCount').textContent = `${openRoles} role${openRoles !== 1 ? 's' : ''}`;
+
+  const tbody = document.getElementById('pipelineTableBody');
+  tbody.innerHTML = pipeline.map(r => `
+    <tr>
+      <td><strong>${r.job}</strong></td>
+      <td><span class="badge badge-gray">${r.reqId}</span></td>
+      <td>${r.department}</td>
+      <td>${r.appReview || '—'}</td>
+      <td>${r.hmReview || '—'}</td>
+      <td>${r.recruiterPhone || '—'}</td>
+      <td>${r.hmInterview || '—'}</td>
+      <td>${r.offer ? `<span class="badge badge-green">${r.offer}</span>` : '—'}</td>
+      <td><strong>${r.totalInPipeline}</strong></td>
+    </tr>
+  `).join('');
+
+  // Stage bar
+  const stageLabels = ['App Review', 'HM Review', 'Rec. Screen', 'HM Interview', 'Offer'];
+  const stageCounts = [
+    pipeline.reduce((s,r) => s+r.appReview,0),
+    pipeline.reduce((s,r) => s+r.hmReview,0),
+    pipeline.reduce((s,r) => s+r.recruiterPhone,0),
+    pipeline.reduce((s,r) => s+r.hmInterview,0),
+    pipeline.reduce((s,r) => s+r.offer,0)
+  ];
+  makeChart('chartPipelineStages', 'bar', {
+    labels: stageLabels,
+    datasets: [{ data: stageCounts, backgroundColor: [COLORS.muted, '#3A5FFF', COLORS.yellow, COLORS.orange, COLORS.green], borderRadius: 6, borderSkipped: false }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+}
+
+// ─── QUALITY OF HIRE ─────────────────────────────────────────────────
+function renderQuality(promos, terms, hires) {
+  const regrettable = terms.filter(t => t.isRegrettable).length;
+  const nonReg = terms.filter(t => !t.isRegrettable).length;
+  const regPct = terms.length ? Math.round(regrettable / terms.length * 100) : 0;
+
+  document.getElementById('qohKpiGrid').innerHTML = `
+    <div class="kpi-card purple">
+      <div class="kpi-label">Total Promotions</div>
+      <div class="kpi-value">${promos.length}</div>
+      <div class="kpi-sub">Employees promoted</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">Non-Regrettable Attrition</div>
+      <div class="kpi-value">${nonReg}</div>
+      <div class="kpi-sub">${100 - regPct}% of departures</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Regrettable Attrition</div>
+      <div class="kpi-value">${regrettable}</div>
+      <div class="kpi-sub">${regPct}% of departures</div>
+    </div>
+  `;
+
+  // Promos by year
+  const pByYear = groupBy(promos, 'year');
+  const pyears = Object.keys(pByYear).sort();
+  makeChart('chartPromoByYear', 'bar', {
+    labels: pyears,
+    datasets: [{ data: pyears.map(y => pByYear[y]), backgroundColor: COLORS.purple, borderRadius: 6, borderSkipped: false }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+
+  // Promos by dept
+  const pByDept = groupBy(promos, 'department');
+  const pdepts = Object.entries(pByDept).sort((a,b) => b[1]-a[1]);
+  makeChart('chartPromoByDept', 'bar', {
+    labels: pdepts.map(d => d[0]),
+    datasets: [{ data: pdepts.map(d => d[1]), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false }]
+  }, chartDefaults({ indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' } }, y: { grid: { display: false } } } }));
+
+  // Regrettable by year
+  const years = [...new Set(terms.map(t => t.year))].sort();
+  const regByYear = years.map(y => terms.filter(t => t.year === y && t.isRegrettable).length);
+  const nonRegByYear = years.map(y => terms.filter(t => t.year === y && !t.isRegrettable).length);
+  makeChart('chartRegrettable', 'bar', {
+    labels: years,
+    datasets: [
+      { label: 'Regrettable', data: regByYear, backgroundColor: COLORS.orange, borderRadius: 4, borderSkipped: false },
+      { label: 'Non-Regrettable', data: nonRegByYear, backgroundColor: COLORS.muted, borderRadius: 4, borderSkipped: false }
+    ]
+  }, chartDefaults({ plugins: { legend: { display: true, labels: { color: '#7A7A9A', padding: 16 } } } }));
+
+  // Term reasons
+  const reasonMap = groupBy(terms, 'reason');
+  const reasons = Object.entries(reasonMap).sort((a,b) => b[1]-a[1]).slice(0,10);
+  makeChart('chartTermReasons', 'bar', {
+    labels: reasons.map(r => r[0].replace('Non-Regrettable: ','').replace('Regrettable: ','')),
+    datasets: [{ data: reasons.map(r => r[1]), backgroundColor: reasons.map(r => r[0].includes('Regrettable') && !r[0].includes('Non-') ? COLORS.orange : COLORS.muted), borderRadius: 4, borderSkipped: false }]
+  }, chartDefaults({ indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { grid: { color: 'rgba(255,255,255,0.04)' } }, y: { grid: { display: false }, ticks: { font: { size: 11 } } } } }));
+
+  // Promos table
+  const sorted = [...promos].sort((a,b) => b.effectiveDate.localeCompare(a.effectiveDate));
+  document.getElementById('promoCount').textContent = `${promos.length} promotions`;
+  document.getElementById('promoTableBody').innerHTML = sorted.map(p => `
+    <tr>
+      <td><strong>${p.name}</strong></td>
+      <td>${p.effectiveDate}</td>
+      <td><span class="badge badge-purple">${p.department}</span></td>
+      <td>${p.jobTitle}</td>
+      <td>${p.reportsTo}</td>
+    </tr>
+  `).join('');
+}
+
+// ─── HIRES TABLE ─────────────────────────────────────────────────────
+function renderHiresTable(hires) {
+  document.getElementById('hiresCount').textContent = `${hires.length} hires`;
+  const sorted = [...hires].sort((a,b) => b.startDate.localeCompare(a.startDate));
+  document.getElementById('hiresTableBody').innerHTML = sorted.map(h => {
+    const daysColor = h.daysOpen > 90 ? 'badge-red' : h.daysOpen > 60 ? 'badge-orange' : h.daysOpen < 21 ? 'badge-green' : 'badge-blue';
+    const recBadge = h.recruiter === 'Liz Velatini' ? 'badge-blue' : 'badge-green';
+    const isActive = ACTIVE_RECRUITERS.includes(h.recruiter);
+    return `
+    <tr style="${!isActive ? 'opacity:0.4' : ''}">
+      <td><strong>${h.firstName} ${h.lastName}</strong></td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis">${h.job}</td>
+      <td>${h.department}</td>
+      <td><span class="badge ${recBadge}">${h.recruiter}</span></td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${h.hiringManager}</td>
+      <td>${h.startDate}</td>
+      <td><span class="badge ${daysColor}">${h.daysOpen}d</span></td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:12px">${h.source}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── TURNOVER ────────────────────────────────────────────────────────
+function renderTurnover(terms) {
+  const vol = terms.filter(t => t.type === 'Resignation (Voluntary)').length;
+  const invol = terms.filter(t => t.type === 'Termination (Involuntary)').length;
+  const reg = terms.filter(t => t.isRegrettable).length;
+  document.getElementById('turnoverKpiGrid').innerHTML = `
+    <div class="kpi-card red">
+      <div class="kpi-label">Total Departures</div>
+      <div class="kpi-value">${terms.length}</div>
+      <div class="kpi-sub">In selected period</div>
+    </div>
+    <div class="kpi-card orange">
+      <div class="kpi-label">Voluntary</div>
+      <div class="kpi-value">${vol}</div>
+      <div class="kpi-sub">Resignations</div>
+    </div>
+    <div class="kpi-card yellow">
+      <div class="kpi-label">Involuntary</div>
+      <div class="kpi-value">${invol}</div>
+      <div class="kpi-sub">Terminations</div>
+    </div>
+    <div class="kpi-card purple">
+      <div class="kpi-label">Regrettable</div>
+      <div class="kpi-value">${reg}</div>
+      <div class="kpi-sub">${terms.length ? Math.round(reg/terms.length*100) : 0}% of total</div>
+    </div>
+  `;
+
+  const years = [...new Set(terms.map(t => t.year))].sort();
+  makeChart('chartTermByYear', 'bar', {
+    labels: years,
+    datasets: [
+      { label: 'Voluntary', data: years.map(y => terms.filter(t => t.year === y && t.type.includes('Voluntary')).length), backgroundColor: COLORS.orange, borderRadius: 4 },
+      { label: 'Involuntary', data: years.map(y => terms.filter(t => t.year === y && t.type.includes('Involuntary')).length), backgroundColor: COLORS.yellow, borderRadius: 4 }
+    ]
+  }, chartDefaults({ plugins: { legend: { display: true, labels: { color: '#7A7A9A', padding: 16 } } } }));
+
+  const byDept = groupBy(terms, 'department');
+  const depts = Object.entries(byDept).sort((a,b) => b[1]-a[1]);
+  makeChart('chartTermByDept', 'bar', {
+    labels: depts.map(d => d[0]),
+    datasets: [{ data: depts.map(d => d[1]), backgroundColor: PALETTE, borderRadius: 5, borderSkipped: false }]
+  }, chartDefaults({ plugins: { legend: { display: false } } }));
+
+  const sorted = [...terms].sort((a,b) => b.terminationDate.localeCompare(a.terminationDate));
+  document.getElementById('termCount').textContent = `${terms.length} records`;
+  document.getElementById('termTableBody').innerHTML = sorted.map(t => {
+    const typeBadge = t.type.includes('Voluntary') ? 'badge-orange' : 'badge-yellow';
+    const regBadge = t.isRegrettable ? 'badge-red' : 'badge-gray';
+    return `<tr>
+      <td><strong>${t.name}</strong></td>
+      <td>${t.terminationDate}</td>
+      <td>${t.department}</td>
+      <td><span class="badge ${typeBadge}">${t.type.includes('Voluntary') ? 'Voluntary' : 'Involuntary'}</span></td>
+      <td><span class="badge ${regBadge}">${t.reason.replace('Non-Regrettable: ','').replace('Regrettable: '')}</span></td>
+      <td>${t.lengthOfService}</td>
+      <td>${t.manager}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ════════════════════════════════════════
+// TABS
+// ════════════════════════════════════════
+function switchTab(id) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  render();
+}
+
+// ════════════════════════════════════════
+// FILTER EVENTS
+// ════════════════════════════════════════
+['filterYear','filterQuarter','filterRecruiter','filterDept','filterHM'].forEach(id => {
+  document.getElementById(id).addEventListener('change', render);
+});
+
+function resetFilters() {
+  ['filterYear','filterQuarter','filterRecruiter','filterDept','filterHM'].forEach(id => {
+    document.getElementById(id).value = 'all';
+  });
+  render();
+}
+
+// ════════════════════════════════════════
+// UPLOAD HANDLERS
+// ════════════════════════════════════════
+function dragOver(e, type) { e.preventDefault(); document.getElementById('zone-'+type).classList.add('drag-over'); }
+function dragLeave(type) { document.getElementById('zone-'+type).classList.remove('drag-over'); }
+function dropFile(e, type) { e.preventDefault(); dragLeave(type); const file = e.dataTransfer.files[0]; if (file) processFile(file, type); }
+function handleUpload(e, type) { const file = e.target.files[0]; if (file) processFile(file, type); }
+
+function setStatus(type, msg, isError) {
+  const el = document.getElementById('status-'+type);
+  el.textContent = msg;
+  el.className = 'upload-status ' + (isError ? 'error' : 'success');
+}
+
+function processFile(file, type) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: 'array', cellDates: true });
+
+      if (type === 'hires') parseHires(wb, type);
+      else if (type === 'turnover') parseTurnover(wb, type);
+      else if (type === 'promotions') parsePromotions(wb, type);
+      else if (type === 'pipeline') parsePipeline(wb, type);
+
+      render();
+    } catch(err) {
+      setStatus(type, '✗ Error: ' + err.message, true);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function sheetToJson(wb, sheetName) {
+  const sheet = wb.Sheets[sheetName] || wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, { defval: null });
+}
+
+function parseDateField(val) {
+  if (!val) return null;
+  if (val instanceof Date) return val;
+  const d = new Date(val);
+  return isNaN(d) ? null : d;
+}
+
+function parseHires(wb, type) {
+  // Find the right sheet
+  let sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('new hire')) || wb.SheetNames[0];
+  const rows = sheetToJson(wb, sheetName);
+  const records = [];
+  for (const r of rows) {
+    const startDate = parseDateField(r['Start Date (Application)'] || r['Start Date'] || r['startDate']);
+    const offerDate = parseDateField(r['Offer Date'] || r['offerDate']);
+    if (!startDate) continue;
+    const d = new Date(startDate);
+    const recruiter = String(r['Recruiter'] || r['recruiter'] || '');
+    records.push({
+      firstName: String(r['First Name'] || r['firstName'] || ''),
+      lastName: String(r['Last Name'] || r['lastName'] || ''),
+      job: String(r['Job Name'] || r['job'] || ''),
+      department: String(r['Department'] || r['department'] || 'Unknown'),
+      offerDate: offerDate ? offerDate.toISOString().slice(0,10) : null,
+      startDate: d.toISOString().slice(0,10),
+      hiringManager: String(r['Hiring Managers'] || r['Hiring Manager'] || r['hiringManager'] || 'Unknown'),
+      recruiter,
+      source: String(r['Source'] || r['source'] || 'Unknown'),
+      daysOpen: parseInt(r['Days Open (Job)'] || r['daysOpen'] || 0) || 0,
+      year: d.getFullYear(),
+      quarter: Math.ceil((d.getMonth()+1)/3),
+      month: d.getMonth()+1
+    });
+  }
+  if (!records.length) { setStatus(type, '✗ No valid rows found. Check column names.', true); return; }
+  DB.hires = records;
+  setStatus(type, `✓ Loaded ${records.length} hire records from ${sheetName}`);
+}
+
+function parseTurnover(wb, type) {
+  let sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('terminated') || s.toLowerCase().includes('turnover')) || wb.SheetNames[0];
+  const rows = sheetToJson(wb, sheetName);
+  const records = [];
+  for (const r of rows) {
+    const termDate = parseDateField(r['Termination Date'] || r['terminationDate']);
+    if (!termDate) continue;
+    const d = new Date(termDate);
+    const reason = String(r['Termination Reason'] || r['reason'] || 'Unknown');
+    records.push({
+      name: String(r['Name'] || r['name'] || ''),
+      terminationDate: d.toISOString().slice(0,10),
+      lengthOfService: String(r['Length of Service'] || r['lengthOfService'] || 'Unknown'),
+      manager: String(r['Manager'] || r['manager'] || 'Unknown'),
+      reason,
+      type: String(r['Termination Type'] || r['type'] || 'Unknown'),
+      department: String(r['Department'] || r['department'] || 'Unknown'),
+      isRegrettable: reason.includes('Regrettable') && !reason.includes('Non-Regrettable'),
+      year: d.getFullYear(),
+      quarter: Math.ceil((d.getMonth()+1)/3)
+    });
+  }
+  if (!records.length) { setStatus(type, '✗ No valid rows found.', true); return; }
+  DB.terms = records;
+  setStatus(type, `✓ Loaded ${records.length} termination records`);
+}
+
+function parsePromotions(wb, type) {
+  let sheetName = wb.SheetNames.find(s => s.toLowerCase().includes('report data')) || wb.SheetNames[0];
+  const rows = sheetToJson(wb, sheetName);
+  const seen = new Set();
+  const records = [];
+  for (const r of rows) {
+    const effDate = parseDateField(r['Effective Date'] || r['effectiveDate']);
+    if (!effDate) continue;
+    const d = new Date(effDate);
+    const nameRaw = String(r['Last name, First name'] || r['Name'] || r['name'] || '');
+    const parts = nameRaw.split(', ');
+    const name = parts.length === 2 ? `${parts[1]} ${parts[0]}` : nameRaw;
+    const jobTitle = String(r['Job Title'] || r['jobTitle'] || '');
+    const key = name + effDate + jobTitle;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    records.push({
+      name,
+      effectiveDate: d.toISOString().slice(0,10),
+      department: String(r['Department'] || r['department'] || 'Unknown'),
+      jobTitle,
+      reportsTo: String(r['Reports To'] || r['reportsTo'] || 'Unknown'),
+      year: d.getFullYear(),
+      quarter: Math.ceil((d.getMonth()+1)/3)
+    });
+  }
+  if (!records.length) { setStatus(type, '✗ No valid rows found.', true); return; }
+  DB.promos = records;
+  setStatus(type, `✓ Loaded ${records.length} promotion records`);
+}
+
+function parsePipeline(wb, type) {
+  // Handle the Greenhouse CSV metadata rows
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const allRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null });
+  // Find header row (row with 'Job' in first column)
+  let headerIdx = allRows.findIndex(r => r[0] === 'Job');
+  if (headerIdx === -1) headerIdx = 0;
+  const headers = allRows[headerIdx];
+  const records = [];
+  for (let i = headerIdx + 1; i < allRows.length; i++) {
+    const row = allRows[i];
+    if (!row[0] || row[0] === 'Total') continue;
+    const getVal = (label) => {
+      const idx = headers.findIndex(h => h && String(h).toLowerCase().includes(label.toLowerCase()));
+      return idx >= 0 ? (parseInt(row[idx]) || 0) : 0;
+    };
+    const total = row.slice(4).reduce((s, v) => s + (parseInt(v) || 0), 0);
+    records.push({
+      job: String(row[0]),
+      reqId: String(row[1] || ''),
+      department: String(row[2] || 'Unknown'),
+      appReview: getVal('Application Review'),
+      hmReview: getVal('Hiring Manager Review'),
+      recruiterPhone: getVal('Recruiter Phone'),
+      hmInterview: getVal('Hiring Manager Interview'),
+      offer: getVal('Offer'),
+      totalInPipeline: total
+    });
+  }
+  if (!records.length) { setStatus(type, '✗ No valid pipeline rows found.', true); return; }
+  DB.pipeline = records;
+  setStatus(type, `✓ Loaded ${records.length} open roles`);
+}
+
+// ════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════
+populateDropdowns();
+render();
+</script>
+</body>
+</html>
